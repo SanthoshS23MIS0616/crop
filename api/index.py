@@ -1,43 +1,41 @@
+# api/index.py
+
+# -------------------------------
+# 1️⃣ Suppress Warnings (optional)
+# -------------------------------
+import warnings
+warnings.filterwarnings("ignore")  # hides sklearn warnings temporarily
+
+# -------------------------------
+# 2️⃣ Import Libraries
+# -------------------------------
 from flask import Flask, render_template, request, jsonify
 from utils.crop_engine import CropEngine
-from utils.weather_api import fetch_weather
 
+# -------------------------------
+# 3️⃣ Initialize Flask App
+# -------------------------------
 app = Flask(__name__)
-engine = CropEngine("data/crop_data.csv")
+crop_engine = CropEngine()  # your custom model engine
 
-@app.route("/")
-def index():
-    return render_template("index.html")
+# -------------------------------
+# 4️⃣ Define Routes
+# -------------------------------
+@app.route('/')
+def home():
+    return render_template('index.html')  # your homepage
 
-@app.route("/get_weather", methods=["POST"])
-def get_weather():
-    data = request.json
-    lat = float(data.get("lat", 13.08))
-    lon = float(data.get("lon", 80.27))
-    weather = fetch_weather(lat, lon)
-    return jsonify(weather)
-
-@app.route("/predict", methods=["POST"])
+@app.route('/predict', methods=['POST'])
 def predict():
-    data = request.json
-    n = float(data["n"])
-    p = float(data["p"])
-    k = float(data["k"])
-    ph = float(data["ph"])
-    temp = float(data["temp"])
-    humidity = float(data["humidity"])
-    rainfall = float(data["rainfall"])
-    area = float(data["area"])
-    lat = data.get("lat", "N/A")
-    lon = data.get("lon", "N/A")
+    try:
+        data = request.json
+        prediction = crop_engine.predict(data)  # adjust based on your CropEngine
+        return jsonify({'prediction': prediction})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
-    result = engine.predict(n, p, k, ph, temp, humidity, rainfall, area)
-    result["location"] = {"lat": lat, "lon": lon}
-    return jsonify(result)
-
-# Only run this locally for development
-# Render uses gunicorn — do NOT run app.run() in production
-if __name__ == "__main__":
-    import os
-    if os.getenv("FLASK_ENV") == "development":
-        app.run(debug=True, host="0.0.0.0", port=5000)
+# -------------------------------
+# 5️⃣ Run the App
+# -------------------------------
+if __name__ == '__main__':
+    app.run(debug=True)
